@@ -1,51 +1,78 @@
 #!/bin/bash
 
+# Keep track of whether any Testcase fails
 result=0
 
-for number in 1 2 3 4; do
-    input_dir="Testcase${number}"
-    output_dir="Testcase${number}Diff"
+# Loop through Testcase1 to Testcase4
+for ((i = 1; i < 5; i++)); do
+
+    # Set input and output directory names
+    input="Testcase${i}"
+    output="Testcase${i}Diff"
+
+    # Assume the Testcase passes initially
     valid=1
     has_differences=0
 
-    for first in "$input_dir"/*.1.txt; do
-        [ -f "$first" ] || continue
+    # Loop through all .1.txt files
+    for file in "$input"/*.1.txt; do
 
-        second="${first%.1.txt}.2.txt"
-        filename="${first##*/}"
-        output_file="$output_dir/${filename%.1.txt}Diff.txt"
+        # Skip if the file does not exist
+        [ -f "$file" ] || continue
 
+        # Find the matching .2.txt file
+        second="${file%.1.txt}.2.txt"
+
+        # Get the filename without the directory
+        name="${file##*/}"
+
+        # Create the expected output filename
+        expected="$output/${name%.1.txt}Diff.txt"
+
+        # Check if the second file exists
         if [ ! -f "$second" ]; then
             valid=0
-        elif cmp -s "$first" "$second"; then
-            if [ -e "$output_file" ]; then
+
+        # Check if the two files are identical
+        elif diff -u "$file" "$second" > /dev/null; then
+
+            # Identical pairs should not have output files
+            if [ -e "$expected" ]; then
                 valid=0
             fi
+
         else
+            # The files differ
             has_differences=1
 
-            if [ ! -f "$output_file" ]; then
+            # Check if the expected output file exists
+            if [ ! -f "$expected" ]; then
                 valid=0
+
+            # Compare diff output, ignoring the first two lines
             elif ! cmp -s \
-                <(diff -u "$first" "$second" | tail -n +3) \
-                <(tail -n +3 "$output_file"); then
+                <(diff -u "$file" "$second" | tail -n +3) \
+                <(tail -n +3 "$expected"); then
                 valid=0
             fi
         fi
     done
 
+    # Check if the output directory should exist
     if [ "$has_differences" -eq 1 ]; then
-        [ -d "$output_dir" ] || valid=0
+        [ -d "$output" ] || valid=0
     else
-        [ ! -d "$output_dir" ] || valid=0
+        [ ! -d "$output" ] || valid=0
     fi
 
+    # Print PASS or FAIL for each Testcase
     if [ "$valid" -eq 1 ]; then
-        echo "Testcase${number}: PASS"
+        echo "Testcase${i}: PASS"
     else
-        echo "Testcase${number}: FAIL"
+        echo "Testcase${i}: FAIL"
         result=1
     fi
 done
 
+# Return 0 if all Testcases passed, otherwise 1
 exit "$result"

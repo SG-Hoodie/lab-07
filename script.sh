@@ -1,21 +1,22 @@
-#!/bin/bash
+#!/bin/bash #tells script should be executed using bash
+#runs 4 times
+for ((i = 1; i < 5; i++)); do
+    input="Testcase${i}"
+    output="Testcase${i}Diff"
 
-for number in 1 2 3 4; do
-    input_dir="Testcase${number}"
-    output_dir="Testcase${number}Diff"
+    rm -rf "$output" #remove old output
 
-    rm -rf "$output_dir"
+    for file in "$input"/*.1.txt; do #finds all filenames ending in .1.txt inside the input directory
+        [ -f "$file" ] || continue # Check if the file exists
 
-    for first in "$input_dir"/*.1.txt; do
-        [ -f "$first" ] || continue
+        second="${file%.1.txt}.2.txt"
+        name="${file##*/}" #removes the directory path, leaving just the filename
+        result="$output/${name%.1.txt}Diff.txt"
 
-        second="${first%.1.txt}.2.txt"
-        filename="${first##*/}"
-        output_file="$output_dir/${filename%.1.txt}Diff.txt"
-
-        if ! cmp -s "$first" "$second"; then
-            mkdir -p "$output_dir"
-            diff -u "$first" "$second" > "$output_file"
+        if ! diff -u "$file" "$second" > /dev/null; then
+            mkdir -p "$output"
+            diff -u "$file" "$second" > "$result"
         fi
     done
 done
+
